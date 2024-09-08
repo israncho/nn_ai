@@ -2,41 +2,13 @@ from abc import ABC, abstractmethod
 from typing import Union
 import numpy as np
 
-class DataNode(ABC):
-    '''Clase abstracta para nodos de datos en
-    la grafica computacional.'''
+class Node(ABC):
 
-    def __call__(self) -> Union[np.ndarray, float]:
-        return self.forward()
+    def __init__(self, *previous_nodes,
+                 output: Union[np.ndarray, float] = 0):
 
-    @abstractmethod
-    def forward(self) -> Union[np.ndarray, float]:
-        '''Devuelve los datos del nodo.'''
-
-
-class Weights(DataNode):
-    '''Nodo que contiene pesos inicializados aleatoriamente.'''
-
-    def __init__(self, dimension: int):
-        self.w = np.random.uniform(0, 1, size=dimension)
-
-    def forward(self):
-        return self.w
-
-
-class Bias(DataNode):
-    '''Nodo que contiene un valor de sesgo inicializado aleatoriamente.'''
-
-    def __init__(self):
-        self.b = np.random.random()
-
-    def forward(self):
-        return self.b
-
-
-class OperationNode(ABC):
-    '''Clase abstracta para nodos que realizan calculos
-    con datos de entrada y salidas de otros nodos.'''
+        self.previous_nodes = previous_nodes
+        self.output: Union[np.ndarray, float] = output
 
     def __call__(self, *args) -> Union[np.ndarray, float]:
         return self.forward(*args)
@@ -45,44 +17,88 @@ class OperationNode(ABC):
     def forward(self, *args) -> Union[np.ndarray, float]:
         '''Ejecuta la operación con la entrada proporcionada.'''
 
+    @abstractmethod
+    def backward(self, *args) -> None:
+        ''' To Do '''
 
-class PreActivation(OperationNode):
+
+class Weights(Node):
+    '''Nodo que contiene pesos inicializados aleatoriamente.'''
+
+    def __init__(self, dimension: int):
+        w = np.random.uniform(0, 1, size=dimension)
+        super().__init__(output=w)
+
+    def forward(self, *args):
+        return self.output
+
+    def backward(self, *args):
+        pass
+
+
+class Bias(Node):
+    '''Nodo que contiene un valor de sesgo inicializado aleatoriamente.'''
+
+    def __init__(self):
+        super().__init__(output=np.random.random())
+
+    def forward(self, *args):
+        return self.output
+
+    def backward(self, *args):
+        pass
+
+
+class PreActivation(Node):
     '''Nodo que calcula el valor de pre-activación
     (suma ponderada más sesgo)'''
 
     def __init__(self, w: Weights, b: Bias):
-        self.w = w
-        self.b = b
+        super().__init__(w, b)
 
     def forward(self, *args):
+        w, b = self.previous_nodes
         x = args[0]
-        return np.dot(self.w(), x.T) + self.b()
+        self.output = np.dot(w(), x.T) + b()
+        return self.output
+
+    def backward(self, *args):
+        pass
 
 
-class Sigmoid(OperationNode):
+class Sigmoid(Node):
     '''Nodo que aplica la función de activación sigmoide
     a la salida de un nodo de operación anterior.'''
 
-    def __init__(self, previous: OperationNode):
-        self.previous = previous
+    def __init__(self, previous: Node):
+        super().__init__(previous)
 
     def forward(self, *args):
+        prev_node = self.previous_nodes[0]
         x = args[0]
-        return 1 / (1 + np.exp(- self.previous(x)))
+        self.output = 1 / (1 + np.exp(- prev_node(x)))
+        return self.output
+
+    def backward(self, *args):
+        pass
 
 
-class BinCrossEntropy(OperationNode):
+class BinCrossEntropy(Node):
     '''Nodo que calcula la entropía cruzada binaria entre las
     predicciones del modelo y las etiquetas verdaderas.'''
 
-    def __init__(self, previous: OperationNode):
-        self.previous = previous
+    def __init__(self, previous: Node):
+        super().__init__(previous)
 
     def forward(self, *args):
-        x = args[0]
-        y = args[1]
-        f_x = self.previous(x)
-        return -(y * np.log(f_x) + (1 - y) * np.log(1 - f_x))
+        x, y = args
+        prev_node = self.previous_nodes[0]
+        f_x = prev_node(x)
+        self.output = -(y * np.log(f_x) + (1 - y) * np.log(1 - f_x))
+        return self.output
+
+    def backward(self, *args):
+        pass
 
 
 if __name__ == "__main__":
