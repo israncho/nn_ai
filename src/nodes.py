@@ -55,15 +55,24 @@ class PreActivation(Node):
 
     def __init__(self, w: Weights, b: Bias):
         super().__init__(w, b)
+        self.x: Union[np.ndarray, float] = 0
 
     def forward(self, *args):
         w, b = self.previous_nodes
-        x = args[0]
+        self.x = x = args[0]
         self.output = np.dot(w(), x.T) + b()
         return self.output
 
     def backward(self, *args):
-        pass
+        w, b = self.previous_nodes
+        prev_partial = args[0]
+
+        # multiplicacion de entrada for fila en
+        # caso de que se aplique a un lote
+        grad_w = self.x * prev_partial[:, np.newaxis]
+        grad_b = prev_partial
+        w.backward(grad_w)
+        b.backward(grad_b)
 
 
 class Sigmoid(Node):
@@ -80,7 +89,11 @@ class Sigmoid(Node):
         return self.output
 
     def backward(self, *args):
-        pass
+        prev_partial = args[0]
+        prev_output = self.previous_nodes[0].output
+        e_x = np.exp(-prev_output)
+        partial_preactivation = prev_partial * (e_x / (1 + e_x)**2)
+        self.previous_nodes[0].backward(partial_preactivation)
 
 
 class BinCrossEntropy(Node):
@@ -98,7 +111,10 @@ class BinCrossEntropy(Node):
         return self.output
 
     def backward(self, *args):
-        pass
+        y = args[0]
+        prev_output = self.previous_nodes[0].output
+        partial_activation = (prev_output - y) / (prev_output - prev_output**2)
+        self.previous_nodes[0].backward(partial_activation)
 
 
 if __name__ == "__main__":
