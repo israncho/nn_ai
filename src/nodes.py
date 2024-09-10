@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Optional, Union
 import numpy as np
 
 class Node(ABC):
@@ -9,6 +9,7 @@ class Node(ABC):
 
         self.previous_nodes = previous_nodes
         self.output: Union[np.ndarray, float] = output
+        self.grad: Optional[np.ndarray] = None
 
     def __call__(self, *args) -> Union[np.ndarray, float]:
         return self.forward(*args)
@@ -55,7 +56,7 @@ class PreActivation(Node):
 
     def __init__(self, w: Weights, b: Bias):
         super().__init__(w, b)
-        self.x: Union[np.ndarray, float] = 0
+        self.x: Optional[np.ndarray] = None
 
     def forward(self, *args):
         w, b = self.previous_nodes
@@ -68,7 +69,7 @@ class PreActivation(Node):
         child_partial = args[0]
 
         # multiplicacion de entrada for fila en
-        # caso de que se aplique a un lote
+        # caso de que se aplique a mas de un dato
         grad_w = self.x * child_partial[:, np.newaxis]
         grad_b = child_partial
         w.backward(grad_w)
@@ -90,10 +91,11 @@ class Sigmoid(Node):
 
     def backward(self, *args):
         child_partial = args[0]
-        prev_output = self.previous_nodes[0].output
-        e_x = np.exp(-prev_output)
-        partial_preactivation = child_partial * (e_x / (1 + e_x)**2)
-        self.previous_nodes[0].backward(partial_preactivation)
+
+        # parcial con respecto a la preactivation
+        # sigm'(x) = sigm(x) * (1 - sigm(x))
+        self.grad = child_partial * (self.output * (1 - self.output))
+        self.previous_nodes[0].backward(self.grad)
 
 
 class BinCrossEntropy(Node):
@@ -113,8 +115,13 @@ class BinCrossEntropy(Node):
     def backward(self, *args):
         y = args[0]
         prev_output = self.previous_nodes[0].output
-        partial_activation = (prev_output - y) / (prev_output - prev_output**2)
-        self.previous_nodes[0].backward(partial_activation)
+
+        # parcial con respecto a la activacion
+        # cuando y == 1 entonces -1/x pero 1/(1-x) en otro caso
+        self.grad = np.where(y == 1,
+                             - 1 / prev_output,
+                             1 / (1 - prev_output))
+        self.previous_nodes[0].backward(self.grad)
 
 
 if __name__ == "__main__":
