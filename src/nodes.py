@@ -1,79 +1,54 @@
+'''Modulo para la implementación de nodos en una red neuronal.'''
+
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 import numpy as np
 
 class Node(ABC):
+    '''Clase base abstracta para nodos en una red neuronal.'''
 
-    def __init__(self, *previous_nodes,
-                 output: Union[np.ndarray, float] = 0):
-
+    def __init__(self, *previous_nodes):
         self.previous_nodes = previous_nodes
-        self.output: Union[np.ndarray, float] = output
-        self.grad: Optional[np.ndarray] = None
+        self.output: Union[np.ndarray, float] = None # type: ignore
+        self.grad: Union[np.ndarray, Tuple[np.ndarray, ...], None] = None
 
     def __call__(self, *args) -> Union[np.ndarray, float]:
         return self.forward(*args)
 
     @abstractmethod
     def forward(self, *args) -> Union[np.ndarray, float]:
-        '''Ejecuta la operación con la entrada proporcionada.'''
+        '''Ejecuta la operación de propagación hacia adelante
+        para este nodo..'''
 
     @abstractmethod
     def backward(self, *args) -> None:
-        ''' To Do '''
-
-
-class Weights(Node):
-    '''Nodo que contiene pesos inicializados aleatoriamente.'''
-
-    def __init__(self, dimension: int):
-        w = np.random.uniform(0, 1, size=dimension)
-        super().__init__(output=w)
-
-    def forward(self, *args):
-        return self.output
-
-    def backward(self, *args):
-        pass
-
-
-class Bias(Node):
-    '''Nodo que contiene un valor de sesgo inicializado aleatoriamente.'''
-
-    def __init__(self):
-        super().__init__(output=np.random.random())
-
-    def forward(self, *args):
-        return self.output
-
-    def backward(self, *args):
-        pass
+        '''Calcula el gradiente durante la retropropagación
+        para este nodo.'''
 
 
 class PreActivation(Node):
     '''Nodo que calcula el valor de pre-activación
     (suma ponderada más sesgo)'''
 
-    def __init__(self, w: Weights, b: Bias):
-        super().__init__(w, b)
+    def __init__(self, dimension: int, *previous_nodes):
+        super().__init__(*previous_nodes)
+        self.w = np.random.uniform(0, 1, size=dimension)
+        self.b = np.random.random()
         self.x: Optional[np.ndarray] = None
 
     def forward(self, *args):
-        w, b = self.previous_nodes
         self.x = x = args[0]
-        self.output = np.dot(w(), x.T) + b()
+        self.output = np.dot(self.w, x.T) + self.b
         return self.output
 
     def backward(self, *args):
-        w, b = self.previous_nodes
         child_partial = args[0]
 
         # multiplicacion de entrada for fila en
         # caso de que se aplique a mas de un dato
         grad_w = self.x * child_partial[:, np.newaxis]
         grad_b = child_partial
-        w.backward(grad_w)
-        b.backward(grad_b)
+        self.grad = grad_w, grad_b
 
 
 class Sigmoid(Node):
@@ -125,7 +100,7 @@ class BinCrossEntropy(Node):
 
 
 if __name__ == "__main__":
-    logistic_reg = Sigmoid(PreActivation(Weights(2), Bias()))
+    logistic_reg = Sigmoid(PreActivation(2))
     data_set = np.array([[1, 1], [2, 2], [3, 3], [2, 3]])
     data_set_labels = np.array([1, 1, 0, 0])
     print("dataset:\n", data_set)
