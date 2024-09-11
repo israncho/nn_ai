@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
 import numpy as np
 
+
 class Node(ABC):
     '''Clase base abstracta para nodos en una red neuronal.'''
 
@@ -36,8 +37,12 @@ class PreActivation(Node):
         self.b = np.random.random()
         self.x: Optional[np.ndarray] = None
 
+    def __str__(self):
+        return f"Pesos: {self.w}, Bias: {self.b}"
+
     def forward(self, x):
         self.x = x
+        # print(f"preact {x}")
         self.output = np.dot(self.w, x.T) + self.b
         return self.output
 
@@ -48,6 +53,7 @@ class PreActivation(Node):
         grad_w = self.x * incoming_grad[:, np.newaxis]
         grad_b = incoming_grad
         self.grad = grad_w, grad_b
+
 
 
 class Sigmoid(Node):
@@ -68,6 +74,16 @@ class Sigmoid(Node):
         # sigm'(x) = sigm(x) * (1 - sigm(x))
         self.grad = incoming_grad * (self.output * (1 - self.output))
         self.previous_nodes[0].backward(self.grad)
+    
+    def classify(self, x):
+        result = []
+        for sigmoid_x in self.forward(x):
+            if sigmoid_x <= 0.5:
+                result.append(0)
+            else:
+                result.append(1)
+        return result
+        
 
 
 class BinCrossEntropy(Node):
@@ -86,10 +102,9 @@ class BinCrossEntropy(Node):
         prev_output = self.previous_nodes[0].output
 
         # parcial con respecto a la activacion
-        # cuando y == 1 entonces -1/x pero 1/(1-x) en otro caso
-        self.grad = np.where(y == 1,
-                             - 1 / prev_output,
-                             1 / (1 - prev_output))
+        # cuando y == 1 entonces -1/x pero 1/(1-x) si y == 0
+
+        self.grad = -y/prev_output + (1-y)/(1-prev_output)
         self.previous_nodes[0].backward(self.grad)
 
 
