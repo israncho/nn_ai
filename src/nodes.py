@@ -45,7 +45,10 @@ class PreActivation(Node):
 
         # multiplicacion de entrada for fila en
         # caso de que se aplique a mas de un dato
-        grad_w = self.x * incoming_grad[:, np.newaxis]
+        if not np.isscalar(incoming_grad):
+            incoming_grad = incoming_grad[:, np.newaxis]
+
+        grad_w = self.x * incoming_grad
         grad_b = incoming_grad
         self.grad = grad_w, grad_b
 
