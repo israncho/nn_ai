@@ -41,7 +41,7 @@ if __name__ == "__main__":
     x_train, x_eval, y_train, y_eval = train_test_split(x, y, test_size=0.3)
     dimension = 2
 
-    learning_rate = 0.03
+    learning_rate = 0.1
     epochs = 100
 
     solution_node = LogisticRegression(x_train, y_train, learning_rate, epochs)
