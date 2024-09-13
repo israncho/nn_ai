@@ -14,15 +14,15 @@ if __name__ == "__main__":
 
 
     preact = PreActivation(2)
-    logistic_reg = Sigmoid(preact)
-    loss = BinCrossEntropy(logistic_reg)
+    sigm = Sigmoid(preact)
+    loss = BinCrossEntropy(sigm)
     loss_history = []
     lr = 0.1
     for _ in range(100):
-        logistic_reg(x)
+        sigm(preact(x))
         loss_history.append(np.mean(loss(y)))
         for x_i, y_i in zip(x_train, y_train):
-            logistic_reg(x_i) # forward
+            sigm(preact(x_i)) # forward
             loss.backward(y_i) # backward
             grad_w, grad_b = preact.grad
             preact.w -= lr * grad_w
@@ -32,6 +32,6 @@ if __name__ == "__main__":
         print("epoca:",i ,"\terror:", loss)
 
     print("\n")
-    y_prob = logistic_reg(x_eval)
+    y_prob = sigm(preact(x_eval))
     y_pred = (y_prob > 0.5).astype(int)
     print(classification_report(y_eval, y_pred))

@@ -61,8 +61,7 @@ class Sigmoid(Node):
         super().__init__(previous)
 
     def forward(self, x):
-        prev_node = self.previous_nodes[0]
-        self.output = 1 / (1 + np.exp(- prev_node(x)))
+        self.output = 1 / (1 + np.exp(- x))
         return self.output
 
     def backward(self, incoming_grad):
@@ -98,7 +97,7 @@ class BinCrossEntropy(Node):
 
 if __name__ == "__main__":
     preact = PreActivation(2)
-    logistic_reg = Sigmoid(preact)
+    sigm = Sigmoid(preact)
 
     data_set = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     data_set_labels = np.array([0, 0, 0, 1])
@@ -107,9 +106,9 @@ if __name__ == "__main__":
 
     # regresion logistica para cada entrada
     # del dataset
-    print("regresion del dataset: ", logistic_reg(data_set))
+    print("regresion del dataset: ", sigm(preact(data_set)))
 
-    loss = BinCrossEntropy(logistic_reg)
+    loss = BinCrossEntropy(sigm)
     # error de cada entrada del dataset
     print("error: ", loss(data_set_labels))
 
