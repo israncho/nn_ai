@@ -61,6 +61,7 @@ class Sigmoid(Node):
         super().__init__(previous)
 
     def forward(self, x):
+        x = np.clip(x, -35.0, 35.0)
         self.output = 1 / (1 + np.exp(- x))
         return self.output
 
