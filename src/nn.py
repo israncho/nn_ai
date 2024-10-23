@@ -12,16 +12,16 @@ class Node(ABC):
         self.grad: np.ndarray | Tuple[np.ndarray, ...] | None = None
         self.has_weights = has_weights
 
-    def __call__(self, x) -> np.ndarray | float:
+    def __call__(self, x) -> np.ndarray:
         return self.forward(x)
 
     @abstractmethod
-    def forward(self, x) -> np.ndarray | float:
+    def forward(self, x) -> np.ndarray:
         '''Ejecuta la operación de propagación hacia adelante
         para este nodo..'''
 
     @abstractmethod
-    def backward(self, incoming_grad) -> np.ndarray | float | Tuple[np.ndarray, ...]:
+    def backward(self, incoming_grad) -> np.ndarray:
         '''Calcula el gradiente durante la retropropagación
         para este nodo.'''
     
@@ -30,14 +30,16 @@ class Linear(Node):
 
     def __init__(self, input_size: int, output_size: int):
         super().__init__(has_weights = True)
-        self.w = np.random.rand(input_size, output_size)
+        # filas neuronas, columnas pesos
+        self.w = np.random.rand(output_size, input_size)
         self.b = np.random.rand(output_size)
         # salida de la capa anterior 
         self.h: Optional[np.ndarray] = None
     
     def forward(self, x) -> np.ndarray:
         self.h = x
-        self.output = np.dot(self.w, x) + self.b
+        # [:, np.newaxis] tranforma en un vector columna
+        self.output = np.dot(self.w, self.h) + self.b[:, np.newaxis]
         return self.output
     
     def backward(self, incoming_grad) -> np.ndarray:
@@ -100,3 +102,47 @@ class Softmax(Node):
     def backward(self, incoming_grad) -> np.ndarray:
         self.grad = incoming_grad * (self.output * (1 - self.output))
         return self.grad
+
+
+class Sequential(Node):
+    
+    def __init__(self, *layers: Tuple[Node, ...]):
+        super().__init__()
+        self.layers = layers
+        self.params = []
+        for layer in layers:
+            if layer.has_weights:
+                self.params.append(layer)
+    
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        x = x.T
+        if x.ndim == 1: # si solo es un dato se transforma a vector columna
+            x = x[:, np.newaxis]
+        actual_val = x
+        for layer in self.layers:
+            actual_val = layer(actual_val)
+        return actual_val.T
+    
+    def backward(self, incoming_grad) -> np.ndarray:
+        '''ToDo'''
+
+
+def make_classification(r0=1,r1=3,k=1000):
+    """
+    Creacion de los datos
+    """
+    X1 = [np.array([r0*np.cos(t),r0*np.sin(t)]) for t in range(0,k)]
+    X2 = [np.array([r1*np.cos(t),r1*np.sin(t)]) for t in range(0,k)]
+    X = np.concatenate((X1,X2))
+    n,d = X.shape
+    Y = np.zeros(2*k)
+    Y[k:] += 1
+    noise = np.array([np.random.normal(0,1,2) for i in range(n)])
+    X += 0.5*noise
+    return X,Y
+
+
+
+if __name__ == "__main__":
+    x, y = make_classification()
+    network = Sequential(Linear(2, 10), ReLU(), Linear(10, 2), Softmax())
