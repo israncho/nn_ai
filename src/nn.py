@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List
+from sklearn.metrics import classification_report
 import numpy as np
 
 class Node(ABC):
@@ -173,7 +174,50 @@ def make_classification(r0=1,r1=3,k=1000):
     return X,Y
 
 
+def create_mini_batches(X, Y, batch_size):
+    mini_batches = []
+    indices = np.arange(X.shape[0]) # arreglo con los indices de cada dato 
+    np.random.shuffle(indices) # los mezclamos
+
+    # Dividimos en mini-batches
+    for i in range(0, X.shape[0], batch_size):
+        batch_indices = indices[i:i + batch_size]
+        X_batch = X[batch_indices]
+        Y_batch = Y[batch_indices]
+        mini_batches.append((X_batch, Y_batch))
+
+    return mini_batches
+
 
 if __name__ == "__main__":
     x, y = make_classification()
+    y_one_hot = np.eye(2)[y.astype(int)]
+
+    mini_batches = create_mini_batches(x, y_one_hot, 10)
+    lr = 0.1
+    epochs = 10
+
     network = Sequential(Linear(2, 10), ReLU(), Linear(10, 2), Softmax(), error_node=CrossEntropy())
+    
+    predictions = network(x)        
+    predicted_classes = np.argmax(predictions, axis=1)
+    report = classification_report(y, predicted_classes, target_names=['Class 0', 'Class 1'])
+    print('pre-training results')
+    print(report)
+    print()
+
+    # minibatch gradient-descent
+    for _ in range(epochs):
+        for x_batch, y_batch in mini_batches:
+            network(x_batch) # forward
+            network.backward(y_batch)
+
+            for layer_with_weights in network.params:
+                layer_with_weights.w -= lr * layer_with_weights.grad[0]
+                layer_with_weights.b -= lr * layer_with_weights.grad[1]
+                
+    print('post-training results')
+    predictions = network(x)        
+    predicted_classes = np.argmax(predictions, axis=1)
+    report = classification_report(y, predicted_classes, target_names=['Class 0', 'Class 1'], zero_division=0)
+    print(report)
