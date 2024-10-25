@@ -12,8 +12,8 @@ class Node(ABC):
         self.grad: np.ndarray | Tuple[np.ndarray, ...] | None = None
         self.has_weights = has_weights
 
-    def __call__(self, x) -> np.ndarray:
-        return self.forward(x)
+    def __call__(self, *x) -> np.ndarray:
+        return self.forward(*x)
 
     @abstractmethod
     def forward(self, x) -> np.ndarray:
@@ -101,7 +101,29 @@ class Softmax(Node):
     
     def backward(self, incoming_grad) -> np.ndarray:
         self.grad = incoming_grad * (self.output * (1 - self.output))
+
+        for i in range(self.output.shape[0]):
+            mask = np.ones(self.output.shape[0], dtype=bool)
+            mask[i] = False
+            _sum = np.sum(incoming_grad[mask] * (- self.output[mask]), axis=0)
+            self.grad[i] += _sum * self.output[i]
+            
         return self.grad
+
+
+class CrossEntropy(Node):
+    
+    def __init__(self,):
+        super().__init__()
+    
+    def forward(self, y_pred, y_real) -> np.ndarray:
+        epsilon = 1e-9
+        entry_contribution = y_real * np.log(y_pred + epsilon)
+        self.output = - np.sum(entry_contribution, axis=0)
+        return self.output 
+
+    def backward(self, y_pred, y_real) -> np.ndarray:
+        return - (y_real / (y_pred + 1e-9))
 
 
 class Sequential(Node):
