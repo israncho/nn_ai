@@ -1,7 +1,7 @@
 '''Modulo para la implementación de nodos en una red neuronal.'''
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import numpy as np
 
 class Node(ABC):
@@ -21,7 +21,7 @@ class Node(ABC):
         para este nodo..'''
 
     @abstractmethod
-    def backward(self, incoming_grad) -> np.ndarray:
+    def backward(self, incoming_grad) -> np.ndarray | None:
         '''Calcula el gradiente durante la retropropagación
         para este nodo.'''
     
@@ -32,19 +32,24 @@ class Linear(Node):
         super().__init__(has_weights = True)
         # filas neuronas, columnas pesos
         self.w = np.random.rand(output_size, input_size)
-        self.b = np.random.rand(output_size)
+        # [:, np.newaxis] tranforma en un vector columna
+        self.b = np.random.rand(output_size)[:, np.newaxis]
         # salida de la capa anterior 
         self.h: Optional[np.ndarray] = None
     
     def forward(self, x) -> np.ndarray:
         self.h = x
-        # [:, np.newaxis] tranforma en un vector columna
-        self.output = np.dot(self.w, self.h) + self.b[:, np.newaxis]
+        self.output = np.dot(self.w, self.h) + self.b
         return self.output
     
-    def backward(self, incoming_grad) -> np.ndarray:
-        '''todo'''
-        pass
+    def backward(self, incoming_grad) -> None:
+        grad_w = np.zeros_like(self.w)
+        grad_b = np.zeros_like(self.b)
+        for i in range(incoming_grad.shape[-1]):
+            grad_w += np.outer(incoming_grad[:,i], self.h[:, i])
+            grad_b += incoming_grad[:,i][:, np.newaxis]
+
+        self.grad = grad_w, grad_b
 
 
 class ReLU(Node):
@@ -128,13 +133,15 @@ class CrossEntropy(Node):
 
 class Sequential(Node):
     
-    def __init__(self, *layers: Tuple[Node, ...]):
+    def __init__(self, *layers: Tuple[Node, ...], error_node=None):
         super().__init__()
-        self.layers = layers
-        self.params = []
+        self.layers: Tuple[Node, ...] = layers
+        self.params: List[Node] = []
         for layer in layers:
             if layer.has_weights:
                 self.params.append(layer)
+        
+        self.error_node: Node = error_node
     
     def forward(self, x: np.ndarray) -> np.ndarray:
         x = x.T
@@ -143,10 +150,24 @@ class Sequential(Node):
         actual_val = x
         for layer in self.layers:
             actual_val = layer(actual_val)
-        return actual_val.T
+        self.output = actual_val
+        return self.output.T
     
-    def backward(self, incoming_grad) -> np.ndarray:
-        '''ToDo'''
+    def backward(self, labeled_data) -> None:
+
+        dL_df = self.error_node.backward(self.output, labeled_data.T)
+
+        i = len(self.layers) - 1
+        d_kp1 = self.layers[i].backward(dL_df)
+        self.layers[i - 1].backward(d_kp1)
+        w_kp1 = self.layers[i - 1].w
+        i -= 2
+
+        for weighted_layer in reversed(self.params[:-1]):
+            d_k = self.layers[i].backward(np.dot(w_kp1.T, d_kp1))
+            weighted_layer.backward(d_k)
+            d_kp1 = d_k
+            i -= 2
 
 
 def make_classification(r0=1,r1=3,k=1000):
@@ -167,4 +188,4 @@ def make_classification(r0=1,r1=3,k=1000):
 
 if __name__ == "__main__":
     x, y = make_classification()
-    network = Sequential(Linear(2, 10), ReLU(), Linear(10, 2), Softmax())
+    network = Sequential(Linear(2, 10), ReLU(), Linear(10, 2), Softmax(), error_node=CrossEntropy())
