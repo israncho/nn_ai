@@ -125,7 +125,7 @@ class Sequential(Node):
     def __init__(self, *layers: Tuple[Node, ...], error_node=None):
         super().__init__()
         self.layers: Tuple[Node, ...] = layers
-        self.params: List[Node] = []
+        self.params: List[Node] = [] # Nodos/capas con pesos
         for layer in layers:
             if layer.has_weights:
                 self.params.append(layer)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             network(x_batch) # forward
             network.backward(y_batch)
 
-            for layer_with_weights in network.params:
+            for layer_with_weights in network.params: # iteramos los nodos/capas con pesos y los actualizamos
                 layer_with_weights.w -= lr * layer_with_weights.grad[0]
                 layer_with_weights.b -= lr * layer_with_weights.grad[1]
                 
