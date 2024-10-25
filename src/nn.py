@@ -17,25 +17,20 @@ class Node(ABC):
 
     @abstractmethod
     def forward(self, x) -> np.ndarray:
-        '''Ejecuta la operación de propagación hacia adelante
-        para este nodo..'''
+        '''Ejecuta la operación de propagación hacia adelante para este nodo..'''
 
     @abstractmethod
     def backward(self, incoming_grad) -> np.ndarray | None:
-        '''Calcula el gradiente durante la retropropagación
-        para este nodo.'''
+        '''Calcula el gradiente durante la retropropagación para este nodo.'''
     
     
 class Linear(Node):
 
     def __init__(self, input_size: int, output_size: int):
         super().__init__(has_weights = True)
-        # filas neuronas, columnas pesos
-        self.w = np.random.rand(output_size, input_size)
-        # [:, np.newaxis] tranforma en un vector columna
-        self.b = np.random.rand(output_size)[:, np.newaxis]
-        # salida de la capa anterior 
-        self.h: Optional[np.ndarray] = None
+        self.w = np.random.rand(output_size, input_size) # filas neuronas, columnas pesos
+        self.b = np.random.rand(output_size)[:, np.newaxis] # [:, np.newaxis] tranforma en un vector columna
+        self.h: Optional[np.ndarray] = None # salida de la capa anterior
     
     def forward(self, x) -> np.ndarray:
         self.h = x
@@ -56,18 +51,15 @@ class ReLU(Node):
     
     def __init__(self):
         super().__init__()
-        # preactivacion
-        self.a: Optional[np.ndarray] = None
+        self.a: Optional[np.ndarray] = None # preactivacion
 
     def forward(self, x):
         self.a = x
-        # funcion de maximo aplicado a cada entrada
-        self.output = np.maximum(0, self.a)
+        self.output = np.maximum(0, self.a) # funcion de maximo aplicado a cada entrada
         return self.output
     
     def backward(self, incoming_grad):
-        # (self.a > 0) es matriz de booleanos (una mascara)
-        self.grad = incoming_grad * (self.a > 0)
+        self.grad = incoming_grad * (self.a > 0) # (self.a > 0) es matriz de booleanos (una mascara)
         return self.grad
 
 
@@ -78,8 +70,7 @@ class Tanh(Node):
         self.a: Optional[np.ndarray] = None
 
     def forward(self, x):
-        # evitando errores numericos pues np.tanh(19) = 1 !
-        self.a = np.clip(x, -18.5, 18.5)
+        self.a = np.clip(x, -18.5, 18.5) # evitando errores numericos pues np.tanh(19) = 1 !
         self.output = np.tanh(self.a)
         return self.output 
 
@@ -95,13 +86,10 @@ class Softmax(Node):
         self.a: Optional[np.ndarray] = None   
 
     def forward(self, x) -> np.ndarray:
-        # evitando errores numericos pues np.exp(-746) = 0.0 y np.exp(710) = inf
-        self.a = np.clip(x, -709, 709)
+        self.a = np.clip(x, -709, 709) # evitando errores numericos pues np.exp(-746) = 0.0 y np.exp(710) = inf
         exp_a = np.exp(self.a)
-        # vector con las sumas aculadas de cada columna
-        sum_column = np.sum(exp_a, axis=0)
-        # division de cada elemento por su suma de columna correspondiente
-        self.output = exp_a / sum_column
+        sum_column = np.sum(exp_a, axis=0) # vector con las sumas aculadas de cada columna
+        self.output = exp_a / sum_column # division de cada elemento por su suma de columna correspondiente
         return self.output
     
     def backward(self, incoming_grad) -> np.ndarray:
