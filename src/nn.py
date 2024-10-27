@@ -201,12 +201,15 @@ def create_plot_of_points(x: np.ndarray, y: np.ndarray, title: str) -> None:
 
     plt.title(title)
     plt.savefig(f'{title}.png')
+    print(f"file saved as: '{title}.png'")
 
 
 if __name__ == "__main__":
     x, y = make_classification()
 
+    print()
     create_plot_of_points(x, y, 'real_classification')
+    print()
 
     y_one_hot = np.eye(2)[y.astype(int)]
 
@@ -219,9 +222,10 @@ if __name__ == "__main__":
     predictions = network(x)        
     predicted_classes = np.argmax(predictions, axis=1)
     report = classification_report(y, predicted_classes, target_names=['Class 0', 'Class 1'])
+    print('pre-training results:')
     print(report)
     create_plot_of_points(x, predicted_classes, 'Untrained_classification_prediction')
-    print()
+    print('\n\n')
 
     # minibatch gradient-descent
     for _ in range(epochs):
@@ -233,7 +237,7 @@ if __name__ == "__main__":
                 layer_with_weights.w -= lr * layer_with_weights.grad[0]
                 layer_with_weights.b -= lr * layer_with_weights.grad[1]
                 
-    print('post-training results')
+    print('post-training results:')
     predictions = network(x)        
     predicted_classes = np.argmax(predictions, axis=1)
     report = classification_report(y, predicted_classes, target_names=['Class 0', 'Class 1'], zero_division=0)
