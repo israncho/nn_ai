@@ -189,8 +189,25 @@ def create_mini_batches(X, Y, batch_size):
     return mini_batches
 
 
+def create_plot_of_points(x: np.ndarray, y: np.ndarray, title: str) -> None:
+    import matplotlib.pyplot as plt
+
+    plt.scatter(x[:,0], x[:,1], s=5, c=np.where(y == 0, 'blue', 'red'))
+
+    blue_patch = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=5, label='Class 0')
+    red_patch = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=5, label='Class 1')
+
+    plt.legend(handles=[blue_patch, red_patch], title='Classes', fontsize='small')
+
+    plt.title(title)
+    plt.savefig(f'{title}.png')
+
+
 if __name__ == "__main__":
     x, y = make_classification()
+
+    create_plot_of_points(x, y, 'real_classification')
+
     y_one_hot = np.eye(2)[y.astype(int)]
 
     mini_batches = create_mini_batches(x, y_one_hot, 10)
@@ -202,8 +219,8 @@ if __name__ == "__main__":
     predictions = network(x)        
     predicted_classes = np.argmax(predictions, axis=1)
     report = classification_report(y, predicted_classes, target_names=['Class 0', 'Class 1'])
-    print('pre-training results')
     print(report)
+    create_plot_of_points(x, predicted_classes, 'Untrained_classification_prediction')
     print()
 
     # minibatch gradient-descent
@@ -221,3 +238,4 @@ if __name__ == "__main__":
     predicted_classes = np.argmax(predictions, axis=1)
     report = classification_report(y, predicted_classes, target_names=['Class 0', 'Class 1'], zero_division=0)
     print(report)
+    create_plot_of_points(x, predicted_classes, 'Trained_classification_prediction')
