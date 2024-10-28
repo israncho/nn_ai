@@ -138,6 +138,8 @@ class Sequential(Node):
             x = x[:, np.newaxis]
         actual_val = x
         for layer in self.layers:
+            # print(type(layer))
+            # print(actual_val)
             actual_val = layer(actual_val)
         self.output = actual_val
         return self.output.T
@@ -156,6 +158,7 @@ class Sequential(Node):
             d_k = self.layers[i].backward(np.dot(w_kp1.T, d_kp1))
             weighted_layer.backward(d_k)
             d_kp1 = d_k
+            w_kp1 = self.layers[i - 1].w # Uriel: creo que falta esto
             i -= 2
 
 
@@ -217,7 +220,7 @@ if __name__ == "__main__":
     lr = 0.1
     epochs = 10
 
-    network = Sequential(Linear(2, 10), ReLU(), Linear(10, 2), Softmax(), error_node=CrossEntropy())
+    network = Sequential(Linear(2, 10), Tanh(), Linear(10, 5) ,ReLU(), Linear(5, 2), Softmax(), error_node=CrossEntropy())
     
     predictions = network(x)        
     predicted_classes = np.argmax(predictions, axis=1)
