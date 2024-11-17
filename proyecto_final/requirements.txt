@@ -1,0 +1,12 @@
+kaggle
+kagglehub
+numpy
+matplotlib
+jupyterlab
+scikit-learn
+torch
+torchvision
+pillow
+tqdm
+ipywidgets
+ipykernel
